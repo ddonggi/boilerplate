@@ -1,10 +1,13 @@
 const express = require('express') //다운받은 express를 가져온다
 const app = express() //express의 함수를 이용해서 새로운 express app을 만든다
-const port = 3000 //port
+const port = 5000 //port
 const { User } = require('./models/User');
 const bodyParser = require('body-parser');
 const config = require('./config/key');
 const cookieParser = require('cookie-parser');
+const {auth} = require('./middleware/auth');
+
+
 //application/x-www-form-urlencoded
 app.use(bodyParser.urlencoded({extended:true}));
 //body parser 클라이언트에서 오는 정보를 서버에서 분석해서 가져올 수 있게 해주는거
@@ -28,6 +31,10 @@ app.get('/', (req, res) => {
   res.send('Hello World! ㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋ');
 });
 
+app.get('/api/hello',(req,res)=>{
+  res.send("안녕하ㅓ세용~~");
+})
+
 //회원가입을 위한 라우트
 app.post('/api/user/register' //endpoint
 , (req,res)=>{const user = new User(req.body);
@@ -35,8 +42,8 @@ app.post('/api/user/register' //endpoint
   
 
   user.save((err,user)=>{
-    if(err) return res.json({success:false,err})//
-      return res.status(200).json({succes:true});//////////////
+    if(err) return res.json({success:false,err})
+      return res.status(200).json({succes:true});
      
     });//몽고db 메쏘드
 });
@@ -71,10 +78,33 @@ app.post('/api/user/login', (req,res) => {
     })
 
   })
-  
-
-
 })
+
+app.get('/api/user/auth',auth,(req,res)=>{
+  //여기까지 미들웨어를 통과해왔다는 얘기는 Authentication 이 True 라는 말.
+  res.status(200).json({
+    _id:req.user._id,
+    isAdmin: req.user.role === 0? false :true,
+    isAuth : true,
+    email : req.user.email,
+    name:req.user.name,
+    lastname : req.user.lastname,
+    role: req.user.role,
+    image : req.user.image
+  })
+})
+
+app.get('/api/user/logout',auth,(req,res)=>{
+  //console.log('requser = ',req.user)
+  User.findOneAndUpdate({_id : req.user._id},
+    { token : "" }
+    ,(err,user)=>{
+      if(err) return res.json({success:false, err})
+      return res.status(200).send({
+        success:true
+      })
+    })
+  })
 
 app.listen(port, () => {
   console.log(`Example app listening at http://localhost:${port}`);
